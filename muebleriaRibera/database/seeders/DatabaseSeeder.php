@@ -10,8 +10,8 @@ class DatabaseSeeder extends Seeder
     {
         $this->call([
             RoleSeeder::class,
+            CategoriaSeeder::class, // ← AGREGAR ESTA LÍNEA
             UserSeeder::class,
-            // Agrega otros seeders aquí si los tienes
         ]);
     }
 }

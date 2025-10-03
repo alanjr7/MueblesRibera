@@ -46,14 +46,14 @@ Route::middleware(['auth'])->group(function () {
 
     // Gestión de productos (superadmin y vendedor)
     Route::middleware(['role:superadmin,vendedor'])->group(function () {
-        Route::resource('admin/productos', ProductoController::class);
-        Route::post('admin/productos/{producto}/ajustar-stock', [ProductoController::class, 'ajustarStock'])
+        Route::resource('productos', ProductoController::class);
+        Route::post('productos/{producto}/ajustar-stock', [ProductoController::class, 'ajustarStock'])
              ->name('productos.ajustar-stock');
     });
 
     // Gestión de categorías (superadmin)
     Route::middleware(['role:superadmin'])->group(function () {
-        Route::resource('admin/categorias', CategoriaController::class);
+        Route::resource('categorias', CategoriaController::class);
     });
 
     // Carrito de compras (todos los usuarios autenticados)
@@ -67,22 +67,22 @@ Route::middleware(['auth'])->group(function () {
 
     // Ventas (superadmin y vendedor)
     Route::middleware(['role:superadmin,vendedor'])->group(function () {
-        Route::resource('admin/ventas', VentaController::class)->except(['create', 'edit']);
-        Route::post('/admin/ventas/procesar', [VentaController::class, 'procesarVenta'])->name('ventas.procesar');
-        Route::post('/admin/ventas/{venta}/cancelar', [VentaController::class, 'cancelar'])->name('ventas.cancelar');
+        Route::resource('ventas', VentaController::class)->except(['create', 'edit']);
+        Route::post('/ventas/procesar', [VentaController::class, 'procesarVenta'])->name('ventas.procesar');
+        Route::post('/ventas/{venta}/cancelar', [VentaController::class, 'cancelar'])->name('ventas.cancelar');
     });
 
     // Gestión de usuarios (solo superadmin)
     Route::middleware(['role:superadmin'])->group(function () {
-        Route::resource('admin/users', UserController::class);
-        Route::post('/admin/users/{user}/activar', [UserController::class, 'activar'])->name('users.activar');
+        Route::resource('users', UserController::class);
+        Route::post('/users/{user}/activar', [UserController::class, 'activar'])->name('users.activar');
         
-        Route::resource('admin/roles', RoleController::class);
+        Route::resource('roles', RoleController::class);
     });
 
     // Reportes (superadmin y vendedor)
     Route::middleware(['role:superadmin,vendedor'])->group(function () {
-        Route::prefix('admin/reportes')->group(function () {
+        Route::prefix('reportes')->group(function () {
             Route::get('/ventas', [ReporteController::class, 'ventas'])->name('reportes.ventas');
             Route::get('/inventario', [ReporteController::class, 'inventario'])->name('reportes.inventario');
             Route::get('/usuarios', [ReporteController::class, 'usuarios'])->name('reportes.usuarios');

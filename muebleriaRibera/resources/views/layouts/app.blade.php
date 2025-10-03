@@ -92,7 +92,15 @@
                             </a>
                         </li>
                         @endcan
-
+                       @auth
+                        @if(auth()->user()->hasRole(['superadmin', 'vendedor']))
+                        <li class="nav-item">
+                            <a class="nav-link" href="{{ route('productos.index') }}">
+                                <i class="fas fa-box"></i> Productos
+                            </a>
+                        </li>
+                        @endif
+                        @endauth
                         @can('viewAny', App\Models\User::class)
                         <li class="nav-item">
                             <a class="nav-link" href="{{ route('users.index') }}">
