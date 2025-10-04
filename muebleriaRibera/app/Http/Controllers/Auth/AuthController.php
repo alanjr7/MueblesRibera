@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
 use App\Models\BitacoraLogin;
+use App\Models\BitacoraAccion;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -12,13 +13,6 @@ use Illuminate\Validation\ValidationException;
 
 class AuthController extends Controller
 {
-    // Mostrar formulario de login
-    public function showLoginForm()
-    {
-        return view('auth.login');
-    }
-
-    // Procesar login
     public function login(Request $request)
     {
         $request->validate([
@@ -32,7 +26,9 @@ class AuthController extends Controller
         BitacoraLogin::create([
             'usuario_id' => $user ? $user->id : null,
             'ip_address' => $request->ip(),
-            'exito' => false
+            'user_agent' => $request->userAgent(),
+            'exito' => false,
+            'accion' => 'login_attempt'
         ]);
 
         if (!$user || !Hash::check($request->password, $user->password)) {
@@ -42,6 +38,14 @@ class AuthController extends Controller
         }
 
         if (!$user->activo) {
+            BitacoraLogin::create([
+                'usuario_id' => $user->id,
+                'ip_address' => $request->ip(),
+                'user_agent' => $request->userAgent(),
+                'exito' => false,
+                'accion' => 'login_failed_inactive'
+            ]);
+
             throw ValidationException::withMessages([
                 'email' => ['Su cuenta está desactivada. Contacte al administrador.'],
             ]);
@@ -49,23 +53,61 @@ class AuthController extends Controller
 
         Auth::login($user, $request->boolean('remember'));
 
-        // Actualizar bitácora como exitoso
-        if ($user) {
-            BitacoraLogin::where('usuario_id', $user->id)
-                ->latest()
-                ->first()
-                ->update(['exito' => true]);
-        }
+        // Registrar login exitoso
+        BitacoraLogin::create([
+            'usuario_id' => $user->id,
+            'ip_address' => $request->ip(),
+            'user_agent' => $request->userAgent(),
+            'exito' => true,
+            'accion' => 'login_success'
+        ]);
+
+        // Registrar en bitácora de acciones
+        BitacoraAccion::create([
+            'usuario_id' => $user->id,
+            'accion' => 'login',
+            'modelo' => User::class,
+            'modelo_id' => $user->id,
+            'descripcion' => "Inició sesión en el sistema",
+            'ip_address' => $request->ip(),
+            'user_agent' => $request->userAgent(),
+            'url' => $request->fullUrl(),
+            'metodo' => $request->method()
+        ]);
 
         $request->session()->regenerate();
 
-        // Redireccionar según rol
         return $this->redirectToDashboard($user);
     }
 
-    // Cerrar sesión
     public function logout(Request $request)
     {
+        $user = auth()->user();
+
+        // Registrar logout en bitácora
+        if ($user) {
+            BitacoraLogin::create([
+                'usuario_id' => $user->id,
+                'ip_address' => $request->ip(),
+                'user_agent' => $request->userAgent(),
+                'exito' => true,
+                'accion' => 'logout'
+            ]);
+
+            // Registrar en bitácora de acciones
+            BitacoraAccion::create([
+                'usuario_id' => $user->id,
+                'accion' => 'logout',
+                'modelo' => User::class,
+                'modelo_id' => $user->id,
+                'descripcion' => "Cerró sesión del sistema",
+                'ip_address' => $request->ip(),
+                'user_agent' => $request->userAgent(),
+                'url' => $request->fullUrl(),
+                'metodo' => $request->method()
+            ]);
+        }
+
         Auth::logout();
 
         $request->session()->invalidate();

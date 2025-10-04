@@ -15,7 +15,9 @@ class BitacoraLogin extends Model
         'usuario_id',
         'fecha_login',
         'ip_address',
-        'exito'
+        'user_agent',
+        'exito',
+        'accion' // login, logout, failed_attempt
     ];
 
     protected $casts = [
@@ -45,5 +47,11 @@ class BitacoraLogin extends Model
     public function scopePorRangoFechas($query, $desde, $hasta)
     {
         return $query->whereBetween('fecha_login', [$desde, $hasta]);
+    }
+
+    // Scope por tipo de acción
+    public function scopePorAccion($query, $accion)
+    {
+        return $query->where('accion', $accion);
     }
 }

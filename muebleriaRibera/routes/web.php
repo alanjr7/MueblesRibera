@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\BitacoraController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\Auth\AuthController;
@@ -50,6 +51,15 @@ Route::middleware(['auth'])->group(function () {
         Route::post('productos/{producto}/ajustar-stock', [ProductoController::class, 'ajustarStock'])
              ->name('productos.ajustar-stock');
     });
+
+    // Bitácoras (solo superadmin)
+        Route::middleware(['role:superadmin'])->group(function () {
+            Route::prefix('bitacora')->group(function () {
+                Route::get('/', [BitacoraController::class, 'index'])->name('bitacora.index');
+                Route::get('/acciones', [BitacoraController::class, 'acciones'])->name('bitacora.acciones');
+                Route::get('/logins', [BitacoraController::class, 'logins'])->name('bitacora.logins');
+            });
+        });
 
     // Gestión de categorías (superadmin)
     Route::middleware(['role:superadmin'])->group(function () {

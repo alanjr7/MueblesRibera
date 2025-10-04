@@ -8,7 +8,7 @@ use App\Models\InventarioMov;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\DB;
-
+use App\Models\BitacoraAccion;
 class ProductoController extends Controller
 {
     // Listar productos
@@ -163,75 +163,101 @@ class ProductoController extends Controller
 
     // Eliminar producto
     public function destroy(Producto $producto)
-    {
-        DB::beginTransaction();
+{
+    DB::beginTransaction();
 
-        try {
-            // Eliminar imagen si existe
-            if ($producto->imagen_url) {
-                Storage::disk('public')->delete($producto->imagen_url);
-            }
+    try {
+        // Primero eliminar registros relacionados
+        \App\Models\InventarioMov::where('producto_id', $producto->id)->delete();
+        \App\Models\VentaDetalle::where('producto_id', $producto->id)->delete();
+        \App\Models\CarritoItem::where('producto_id', $producto->id)->delete();
 
-            $producto->delete();
-
-            DB::commit();
-
-            return redirect()->route('productos.index')
-                ->with('success', 'Producto eliminado exitosamente.');
-
-        } catch (\Exception $e) {
-            DB::rollBack();
-            return back()->with('error', 'Error al eliminar el producto: ' . $e->getMessage());
+        // Luego eliminar la imagen si existe
+        if ($producto->imagen_url) {
+            Storage::disk('public')->delete($producto->imagen_url);
         }
-    }
 
+        // Finalmente eliminar el producto
+        $producto->delete();
+
+        DB::commit();
+
+        return redirect()->route('productos.index')
+            ->with('success', 'Producto eliminado exitosamente.');
+
+    } catch (\Exception $e) {
+        DB::rollBack();
+        \Log::error('Error al eliminar producto:', [
+            'producto_id' => $producto->id,
+            'error' => $e->getMessage()
+        ]);
+        return back()->with('error', 'Error al eliminar el producto: ' . $e->getMessage());
+    }
+}
     // Ajustar stock
-    public function ajustarStock(Request $request, Producto $producto)
-    {
-        $request->validate([
-            'tipo_movimiento' => 'required|in:entrada,salida,ajuste',
-            'cantidad' => 'required|integer|min:1',
-            'observaciones' => 'nullable|string|max:500'
+    
+public function ajustarStock(Request $request, Producto $producto)
+{
+    $request->validate([
+        'tipo_movimiento' => 'required|in:entrada,salida,ajuste',
+        'cantidad' => 'required|integer|min:1',
+        'observaciones' => 'nullable|string|max:500'
+    ]);
+
+    DB::beginTransaction();
+
+    try {
+        $cantidad = $request->cantidad;
+        $tipo = $request->tipo_movimiento;
+        $stockAnterior = $producto->stock;
+
+        // Validar stock para salidas
+        if ($tipo === 'salida' && $producto->stock < $cantidad) {
+            return back()->with('error', 'No hay suficiente stock disponible.');
+        }
+
+        // Actualizar stock
+        if ($tipo === 'entrada') {
+            $producto->increment('stock', $cantidad);
+        } elseif ($tipo === 'salida') {
+            $producto->decrement('stock', $cantidad);
+        } else { // ajuste
+            $producto->update(['stock' => $cantidad]);
+        }
+
+        // Registrar movimiento de inventario
+        InventarioMov::create([
+            'producto_id' => $producto->id,
+            'tipo_movimiento' => $tipo,
+            'cantidad' => $cantidad,
+            'usuario_id' => auth()->id(),
+            'observaciones' => $request->observaciones
         ]);
 
-        DB::beginTransaction();
+        // Registrar en bitácora de acciones
+        BitacoraAccion::create([
+            'usuario_id' => auth()->id(),
+            'accion' => 'stock_ajustado',
+            'modelo' => Producto::class,
+            'modelo_id' => $producto->id,
+            'descripcion' => "Ajustó stock de {$producto->nombre} de {$stockAnterior} a {$producto->stock} ({$tipo})",
+            'ip_address' => $request->ip(),
+            'user_agent' => $request->userAgent(),
+            'datos_anteriores' => ['stock' => $stockAnterior],
+            'datos_nuevos' => ['stock' => $producto->stock],
+            'url' => $request->fullUrl(),
+            'metodo' => $request->method()
+        ]);
 
-        try {
-            $cantidad = $request->cantidad;
-            $tipo = $request->tipo_movimiento;
+        DB::commit();
 
-            // Validar stock para salidas
-            if ($tipo === 'salida' && $producto->stock < $cantidad) {
-                return back()->with('error', 'No hay suficiente stock disponible.');
-            }
+        return back()->with('success', "Stock ajustado exitosamente. Nuevo stock: {$producto->stock}");
 
-            // Actualizar stock
-            if ($tipo === 'entrada') {
-                $producto->increment('stock', $cantidad);
-            } elseif ($tipo === 'salida') {
-                $producto->decrement('stock', $cantidad);
-            } else { // ajuste
-                $producto->update(['stock' => $cantidad]);
-            }
-
-            // Registrar movimiento
-            InventarioMov::create([
-                'producto_id' => $producto->id,
-                'tipo_movimiento' => $tipo,
-                'cantidad' => $cantidad,
-                'usuario_id' => auth()->id(),
-                'observaciones' => $request->observaciones
-            ]);
-
-            DB::commit();
-
-            return back()->with('success', "Stock ajustado exitosamente. Nuevo stock: {$producto->stock}");
-
-        } catch (\Exception $e) {
-            DB::rollBack();
-            return back()->with('error', 'Error al ajustar el stock: ' . $e->getMessage());
-        }
+    } catch (\Exception $e) {
+        DB::rollBack();
+        return back()->with('error', 'Error al ajustar el stock: ' . $e->getMessage());
     }
+}
 
     // Actualizar tasa de cambio global
     public function actualizarTasaGlobal(Request $request)

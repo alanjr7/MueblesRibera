@@ -92,6 +92,17 @@
                             </a>
                         </li>
                         @endcan
+
+                        @auth
+                        @if(auth()->user()->hasRole('superadmin'))
+                        <li class="nav-item">
+                            <a class="nav-link" href="{{ route('bitacora.index') }}">
+                                <i class="fas fa-clipboard-list"></i> Bitácora
+                            </a>
+                        </li>
+                        @endif
+                        @endauth
+
                        @auth
                         @if(auth()->user()->hasRole(['superadmin', 'vendedor']))
                         <li class="nav-item">
