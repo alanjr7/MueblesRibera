@@ -15,6 +15,8 @@ class Producto extends Model
         'nombre',
         'descripcion',
         'precio',
+        'precio_usd',
+        'tasa_cambio',
         'stock',
         'categoria_id',
         'imagen_url',
@@ -23,6 +25,8 @@ class Producto extends Model
 
     protected $casts = [
         'precio' => 'decimal:2',
+        'precio_usd' => 'decimal:2',
+        'tasa_cambio' => 'decimal:4',
         'stock' => 'integer',
         'activo' => 'boolean'
     ];
@@ -49,6 +53,30 @@ class Producto extends Model
     public function movimientosInventario()
     {
         return $this->hasMany(InventarioMov::class, 'producto_id');
+    }
+
+    // Calcular precio en bolivianos automáticamente
+    public function getPrecioBsAttribute()
+    {
+        return $this->precio_usd * $this->tasa_cambio;
+    }
+
+    // Formatear precio en bolivianos
+    public function getPrecioBsFormateadoAttribute()
+    {
+        return 'Bs ' . number_format($this->precio_bs, 2);
+    }
+
+    // Formatear precio en dólares
+    public function getPrecioUsdFormateadoAttribute()
+    {
+        return '$' . number_format($this->precio_usd, 2) . ' USD';
+    }
+
+    // Formatear tasa de cambio
+    public function getTasaFormateadaAttribute()
+    {
+        return 'Bs ' . number_format($this->tasa_cambio, 4);
     }
 
     // Scope para productos activos
@@ -89,5 +117,11 @@ class Producto extends Model
     public function incrementarStock($cantidad = 1)
     {
         $this->increment('stock', $cantidad);
+    }
+
+    // Actualizar tasa de cambio para todos los productos
+    public static function actualizarTasaGlobal($nuevaTasa)
+    {
+        return self::where('activo', true)->update(['tasa_cambio' => $nuevaTasa]);
     }
 }

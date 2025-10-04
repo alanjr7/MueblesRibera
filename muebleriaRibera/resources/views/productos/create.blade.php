@@ -54,20 +54,61 @@
                         @enderror
                     </div>
 
-                    <div class="row">
-                        <div class="col-md-6">
-                            <div class="mb-3">
-                                <label for="precio" class="form-label">Precio *</label>
-                                <div class="input-group">
-                                    <span class="input-group-text">$</span>
-                                    <input type="number" step="0.01" class="form-control @error('precio') is-invalid @enderror" 
-                                           id="precio" name="precio" value="{{ old('precio') }}" min="0" required>
+                    <!-- SECCIÓN DE PRECIOS CON CONVERSIÓN -->
+                    <div class="card mb-4">
+                        <div class="card-header bg-light">
+                            <h5 class="mb-0">
+                                <i class="fas fa-dollar-sign"></i> Información de Precios
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="precio_usd" class="form-label">Precio en USD *</label>
+                                        <div class="input-group">
+                                            <span class="input-group-text">$</span>
+                                            <input type="number" step="0.01" class="form-control @error('precio_usd') is-invalid @enderror" 
+                                                   id="precio_usd" name="precio_usd" value="{{ old('precio_usd') }}" min="0" required>
+                                        </div>
+                                        @error('precio_usd')
+                                            <div class="invalid-feedback">{{ $message }}</div>
+                                        @enderror
+                                    </div>
                                 </div>
-                                @error('precio')
-                                    <div class="invalid-feedback">{{ $message }}</div>
-                                @enderror
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="tasa_cambio" class="form-label">Tasa de Cambio (Bs por $1) *</label>
+                                        <div class="input-group">
+                                            <span class="input-group-text">Bs</span>
+                                            <input type="number" step="0.0001" class="form-control @error('tasa_cambio') is-invalid @enderror" 
+                                                   id="tasa_cambio" name="tasa_cambio" value="{{ old('tasa_cambio', 6.96) }}" min="0" required>
+                                        </div>
+                                        <div class="form-text">Tasa actual del dólar en bolivianos</div>
+                                        @error('tasa_cambio')
+                                            <div class="invalid-feedback">{{ $message }}</div>
+                                        @enderror
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Mostrar precio calculado en tiempo real -->
+                            <div class="alert alert-info">
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <strong>Precio en Dólares:</strong>
+                                        <div id="precio_usd_calculado">$0.00 USD</div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <strong>Precio en Bolivianos:</strong>
+                                        <div id="precio_bs_calculado">Bs 0.00</div>
+                                    </div>
+                                </div>
                             </div>
                         </div>
+                    </div>
+
+                    <div class="row">
                         <div class="col-md-6">
                             <div class="mb-3">
                                 <label for="stock" class="form-label">Stock Inicial *</label>
@@ -109,4 +150,30 @@
         </div>
     </div>
 </div>
+
+@push('scripts')
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const precioUsdInput = document.getElementById('precio_usd');
+    const tasaCambioInput = document.getElementById('tasa_cambio');
+    const precioUsdCalculado = document.getElementById('precio_usd_calculado');
+    const precioBsCalculado = document.getElementById('precio_bs_calculado');
+
+    function calcularPrecios() {
+        const usd = parseFloat(precioUsdInput.value) || 0;
+        const tasa = parseFloat(tasaCambioInput.value) || 6.96;
+        const precioBs = usd * tasa;
+        
+        precioUsdCalculado.textContent = '$' + usd.toFixed(2) + ' USD';
+        precioBsCalculado.textContent = 'Bs ' + precioBs.toFixed(2);
+    }
+
+    precioUsdInput.addEventListener('input', calcularPrecios);
+    tasaCambioInput.addEventListener('input', calcularPrecios);
+    
+    // Calcular inicialmente
+    calcularPrecios();
+});
+</script>
+@endpush
 @endsection

@@ -11,12 +11,6 @@ use Illuminate\Support\Facades\DB;
 
 class ProductoController extends Controller
 {
-    // public function __construct()
-    // {
-    //     $this->middleware('auth');
-    //     $this->middleware('role:superadmin,vendedor')->except(['show']);
-    // }
-
     // Listar productos
     public function index(Request $request)
     {
@@ -61,7 +55,8 @@ class ProductoController extends Controller
         $validated = $request->validate([
             'nombre' => 'required|string|max:200',
             'descripcion' => 'nullable|string',
-            'precio' => 'required|numeric|min:0',
+            'precio_usd' => 'required|numeric|min:0',
+            'tasa_cambio' => 'required|numeric|min:0',
             'stock' => 'required|integer|min:0',
             'categoria_id' => 'required|exists:categorias,id',
             'imagen' => 'nullable|image|max:2048',
@@ -71,6 +66,9 @@ class ProductoController extends Controller
         DB::beginTransaction();
 
         try {
+            // Calcular precio en bolivianos automáticamente
+            $validated['precio'] = $validated['precio_usd'] * $validated['tasa_cambio'];
+
             // Manejar imagen
             if ($request->hasFile('imagen')) {
                 $path = $request->file('imagen')->store('productos', 'public');
@@ -120,7 +118,8 @@ class ProductoController extends Controller
         $validated = $request->validate([
             'nombre' => 'required|string|max:200',
             'descripcion' => 'nullable|string',
-            'precio' => 'required|numeric|min:0',
+            'precio_usd' => 'required|numeric|min:0',
+            'tasa_cambio' => 'required|numeric|min:0',
             'categoria_id' => 'required|exists:categorias,id',
             'imagen' => 'nullable|image|max:2048',
             'activo' => 'boolean',
@@ -130,6 +129,9 @@ class ProductoController extends Controller
         DB::beginTransaction();
 
         try {
+            // Calcular precio en bolivianos automáticamente
+            $validated['precio'] = $validated['precio_usd'] * $validated['tasa_cambio'];
+
             // Manejar eliminación de imagen
             if ($request->has('eliminar_imagen') && $producto->imagen_url) {
                 Storage::disk('public')->delete($producto->imagen_url);
@@ -228,6 +230,24 @@ class ProductoController extends Controller
         } catch (\Exception $e) {
             DB::rollBack();
             return back()->with('error', 'Error al ajustar el stock: ' . $e->getMessage());
+        }
+    }
+
+    // Actualizar tasa de cambio global
+    public function actualizarTasaGlobal(Request $request)
+    {
+        $request->validate([
+            'nueva_tasa' => 'required|numeric|min:0'
+        ]);
+
+        try {
+            $productosActualizados = Producto::actualizarTasaGlobal($request->nueva_tasa);
+
+            return redirect()->route('productos.index')
+                ->with('success', "Tasa de cambio actualizada a Bs {$request->nueva_tasa} para {$productosActualizados} productos.");
+
+        } catch (\Exception $e) {
+            return back()->with('error', 'Error al actualizar la tasa de cambio: ' . $e->getMessage());
         }
     }
 }
