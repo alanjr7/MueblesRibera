@@ -5,19 +5,24 @@ services:
     region: oregon
     plan: free
     envVars:
-      - key: DATABASE_URL
-        value: postgresql://muebleriaribera_user:Mx2Cb5H7styBfbcsA6NG3namX6NcIxLn@dpg-d42htf7gi27c73c69dq0-a.oregon-postgres.render.com/muebleriaribera
       - key: DB_CONNECTION
         value: pgsql
-      - key: DB_HOST
-        value: dpg-d42htf7gi27c73c69dq0-a.oregon-postgres.render.com
-      - key: DB_PORT
-        value: 5432
-      - key: DB_DATABASE
-        value: muebleriaribera
-      - key: DB_USERNAME
-        value: muebleriaribera_user
-      - key: DB_PASSWORD
-        value: Mx2Cb5H7styBfbcsA6NG3namX6NcIxLn
+      - key: DATABASE_URL
+        fromDatabase:
+          name: muebleriaribera-db
+          property: connectionString
+      - key: APP_ENV
+        value: production
+      - key: APP_DEBUG
+        value: false
+      - key: APP_KEY
+        value: base64:1MV8g4JS59wJWzwCaqNMHwOoEj+rOAoV9amizaoaWtU=
       - key: APP_URL
         value: https://mueblesribera.onrender.com
+      - key: LOG_CHANNEL
+        value: stderr
+
+databases:
+  - name: muebleriaribera-db
+    region: oregon
+    plan: free
