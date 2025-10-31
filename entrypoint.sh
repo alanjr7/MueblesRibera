@@ -5,55 +5,41 @@ cd /var/www/html
 
 echo "=== Iniciando Muebles Ribera ==="
 
+# Verificar dependencias de Composer
 if [ ! -d "vendor" ] || [ ! -f "vendor/autoload.php" ]; then
     echo "Instalando dependencias de Composer..."
     composer install --no-dev --optimize-autoloader --no-interaction --no-scripts
 fi
 
-if [ ! -f ".env" ]; then
-    if [ -f ".env.example" ]; then
-        echo "Creando .env desde .env.example..."
-        cp .env.example .env
-    else
-        echo "ERROR: No se encontró .env.example"
-        exit 1
-    fi
-else
-    echo ".env ya existe"
-fi
+# NO creamos .env: Usamos directamente las env vars de Render
 
-set_env() {
-    local key="$1"
-    local value="$2"
-    if grep -q "^${key}=" .env 2>/dev/null; then
-        sed -i "s|^${key}=.*|${key}=${value}|" .env
-    else
-        echo "${key}=${value}" >> .env
-    fi
-}
-
-
+# Ejecutar package:discover (Laravel leerá de $_ENV)
 echo "Ejecutando package:discover..."
 php artisan package:discover --ansi --rebuild
 
-if [ -z "$APP_KEY" ] || grep -q "^APP_KEY=$" .env; then
+# Verificar APP_KEY (ya está en Render, pero por si acaso)
+if [ -z "${APP_KEY}" ]; then
     echo "Generando APP_KEY..."
     php artisan key:generate --force
 else
     echo "APP_KEY ya configurada"
 fi
 
+# Permisos
 chown -R www-data:www-data storage bootstrap/cache
 chmod -R 775 storage bootstrap/cache
 
+# Limpiar caché
 php artisan config:clear
 php artisan cache:clear
 php artisan route:clear
 php artisan view:clear
 
+# Migraciones (usa DB_* de Render)
 echo "Ejecutando migraciones..."
 php artisan migrate --force
 
+# Optimizar
 php artisan config:cache
 php artisan route:cache
 php artisan view:cache
