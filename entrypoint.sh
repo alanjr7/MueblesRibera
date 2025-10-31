@@ -3,31 +3,25 @@ set -e
 
 cd /var/www/html
 
-echo "=== Muebles Ribera - Iniciando ==="
-
-# Debug: mostrar conexión
-echo "DB_CONNECTION = ${DB_CONNECTION}"
+echo "=== MUEBLES RIBERA - INICIANDO ==="
+echo "DB_CONNECTION = $DB_CONNECTION"
 echo "DATABASE_URL = ${DATABASE_URL:0:60}..."
 
-# Probar conexión a PostgreSQL
+# Probar conexión
 php -r "
-echo 'Conectando a PostgreSQL...\n';
 \$url = getenv('DATABASE_URL');
-if (!\$url) { echo 'DATABASE_URL no definida\n'; exit(1); }
+if (!\$url) { echo 'ERROR: DATABASE_URL no definida\n'; exit(1); }
 try {
-    \$pdo = new PDO(\$url);
-    echo 'Conexión exitosa!\n';
+    new PDO(\$url);
+    echo 'CONEXIÓN POSTGRESQL EXITOSA\n';
 } catch (Exception \$e) {
-    echo 'Error: ' . \$e->getMessage() . '\n';
+    echo 'ERROR DB: ' . \$e->getMessage() . '\n';
     exit(1);
 }
 "
 
-# Composer (solo si falta vendor)
-if [ ! -d "vendor" ]; then
-    echo "Instalando dependencias..."
-    composer install --no-dev --optimize-autoloader --no-interaction
-fi
+# Composer
+[ ! -d "vendor" ] && composer install --no-dev --optimize-autoloader --no-interaction
 
 # Permisos
 chown -R www-data:www-data storage bootstrap/cache
@@ -38,14 +32,11 @@ php artisan config:clear
 php artisan cache:clear
 php artisan route:clear
 php artisan view:clear
-
-echo "Ejecutando migraciones..."
 php artisan migrate --force
 
-echo "Optimizando..."
 php artisan config:cache
 php artisan route:cache
 php artisan view:cache
 
-echo "=== ¡Listo! Iniciando Apache ==="
+echo "=== ¡APP LISTA! INICIANDO APACHE ==="
 exec apache2-foreground
