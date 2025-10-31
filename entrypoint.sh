@@ -32,28 +32,6 @@ set_env() {
     fi
 }
 
-echo "Inyectando variables de entorno..."
-set_env "APP_NAME"          "${APP_NAME:-Muebles Ribera}"
-set_env "APP_ENV"           "${APP_ENV:-production}"
-set_env "APP_DEBUG"         "${APP_DEBUG:-false}"
-set_env "APP_URL"           "${APP_URL:-https://mueblesribera.onrender.com}"
-set_env "APP_KEY"           "${APP_KEY:-}"
-set_env "APP_LOCALE"        "${APP_LOCALE:-es}"
-set_env "APP_TIMEZONE"      "${APP_TIMEZONE:-America/La_Paz}"
-
-set_env "DB_CONNECTION"     "${DB_CONNECTION:-pgsql}"
-set_env "DB_HOST"           "${DB_HOST:-}"
-set_env "DB_PORT"           "${DB_PORT:-5432}"
-set_env "DB_DATABASE"       "${DB_DATABASE:-}"
-set_env "DB_USERNAME"       "${DB_USERNAME:-}"
-set_env "DB_PASSWORD"       "${DB_PASSWORD:-}"
-
-set_env "SESSION_DRIVER"    "${SESSION_DRIVER:-database}"
-set_env "CACHE_DRIVER"      "${CACHE_DRIVER:-array}"
-set_env "QUEUE_CONNECTION"  "${QUEUE_CONNECTION:-sync}"
-
-set_env "LOG_CHANNEL"       "${LOG_CHANNEL:-stderr}"
-set_env "LOG_LEVEL"         "${LOG_LEVEL:-error}"
 
 echo "Ejecutando package:discover..."
 php artisan package:discover --ansi --rebuild
