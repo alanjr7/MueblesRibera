@@ -7,27 +7,40 @@ echo "=== MUEBLES RIBERA - INICIANDO ==="
 echo "DB_CONNECTION = $DB_CONNECTION"
 echo "DATABASE_URL = ${DATABASE_URL:0:60}..."
 
-# Probar conexión
-php -r "
+# === ESPERAR A QUE POSTGRESQL ESTÉ LISTO ===
+echo "Esperando a que PostgreSQL esté disponible..."
+MAX_ATTEMPTS=30
+COUNT=0
+
+until php -r "
 \$url = getenv('DATABASE_URL');
-if (!\$url) { echo 'ERROR: DATABASE_URL no definida\n'; exit(1); }
+if (!\$url) { echo 'DATABASE_URL no definida\n'; exit(1); }
 try {
     new PDO(\$url);
-    echo 'CONEXIÓN POSTGRESQL EXITOSA\n';
+    exit(0);
 } catch (Exception \$e) {
-    echo 'ERROR DB: ' . \$e->getMessage() . '\n';
     exit(1);
 }
-"
+" > /dev/null 2>&1; do
+    COUNT=$((COUNT + 1))
+    if [ $COUNT -ge $MAX_ATTEMPTS ]; then
+        echo "ERROR: No se pudo conectar a PostgreSQL después de $MAX_ATTEMPTS intentos"
+        exit 1
+    fi
+    echo "Intento $COUNT/$MAX_ATTEMPTS... esperando 2s"
+    sleep 2
+done
 
-# Composer
+echo "CONEXIÓN POSTGRESQL EXITOSA"
+
+# === Composer ===
 [ ! -d "vendor" ] && composer install --no-dev --optimize-autoloader --no-interaction
 
-# Permisos
+# === Permisos ===
 chown -R www-data:www-data storage bootstrap/cache
 chmod -R 775 storage bootstrap/cache
 
-# Laravel
+# === Laravel ===
 php artisan config:clear
 php artisan cache:clear
 php artisan route:clear
