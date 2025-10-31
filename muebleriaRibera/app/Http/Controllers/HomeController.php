@@ -17,14 +17,14 @@ class HomeController extends Controller
             ->select('productos.*', 'categorias.nombre as categoria_nombre')
             ->where('productos.activo', true)
             ->where('productos.stock', '>', 0)
-            ->orderBy(DB::raw('RAND()'))
+            ->orderBy(DB::raw('RANDOM()'))
             ->limit(8)
             ->get();
 
         // Consulta directa para categorías también
         $categorias = DB::table('categorias')
             ->select('categorias.*', 
-                DB::raw('(SELECT COUNT(*) FROM productos WHERE productos.categoria_id = categorias.id AND productos.activo = 1) as productos_count')
+                DB::raw('(SELECT COUNT(*) FROM productos WHERE productos.categoria_id = categorias.id AND productos.activo = TRUE) as productos_count')
             )
             ->where('categorias.activo', true)
             ->get();
@@ -84,7 +84,8 @@ class HomeController extends Controller
             ->where('productos.categoria_id', $producto->categoria_id)
             ->where('productos.id', '!=', $producto->id)
             ->where('productos.stock', '>', 0)
-            ->orderBy(DB::raw('RAND()'))
+            ->orderBy(DB::raw('RANDOM()'))
+
             ->limit(4)
             ->get();
 

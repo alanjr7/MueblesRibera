@@ -71,8 +71,9 @@ class BitacoraAccion extends Model
             'login' => 'Inicio de sesión',
             'logout' => 'Cierre de sesión',
             'stock_ajustado' => 'Ajuste de stock',
-            'venta_realizada' => 'Venta realizada',
-            'venta_cancelada' => 'Venta cancelada'
+            'login_attempt' => 'Intento de login',
+            'login_failed_inactive' => 'Login fallido (inactivo)',
+            'login_success' => 'Login exitoso'
         ];
 
         return $acciones[$this->accion] ?? $this->accion;

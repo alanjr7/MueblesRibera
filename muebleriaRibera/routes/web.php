@@ -60,7 +60,10 @@ Route::middleware(['auth'])->group(function () {
                 Route::get('/logins', [BitacoraController::class, 'logins'])->name('bitacora.logins');
             });
         });
-
+    //rutas de autentificacion personalizadas
+    Route::get('/login', [AuthController::class, 'showLoginForm'])->name('login');
+    Route::post('/login', [AuthController::class, 'login']);
+    Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
     // Gestión de categorías (superadmin)
     Route::middleware(['role:superadmin'])->group(function () {
         Route::resource('categorias', CategoriaController::class);

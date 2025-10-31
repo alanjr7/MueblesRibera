@@ -13,6 +13,11 @@ use Illuminate\Validation\ValidationException;
 
 class AuthController extends Controller
 {
+    public function showLoginForm()
+    {
+        return view('auth.login');
+    }
+
     public function login(Request $request)
     {
         $request->validate([
@@ -22,7 +27,7 @@ class AuthController extends Controller
 
         $user = User::where('email', $request->email)->first();
 
-        // Registrar intento de login en bitácora
+        // Registrar intento de login en bitácora (siempre)
         BitacoraLogin::create([
             'usuario_id' => $user ? $user->id : null,
             'ip_address' => $request->ip(),
@@ -31,12 +36,21 @@ class AuthController extends Controller
             'accion' => 'login_attempt'
         ]);
 
-        if (!$user || !Hash::check($request->password, $user->password)) {
+        // Verificar si el usuario existe
+        if (!$user) {
             throw ValidationException::withMessages([
                 'email' => ['Las credenciales proporcionadas son incorrectas.'],
             ]);
         }
 
+        // Verificar contraseña
+        if (!Hash::check($request->password, $user->password)) {
+            throw ValidationException::withMessages([
+                'email' => ['Las credenciales proporcionadas son incorrectas.'],
+            ]);
+        }
+
+        // Verificar si el usuario está activo
         if (!$user->activo) {
             BitacoraLogin::create([
                 'usuario_id' => $user->id,
@@ -51,9 +65,10 @@ class AuthController extends Controller
             ]);
         }
 
+        // Si todo está bien, iniciar sesión
         Auth::login($user, $request->boolean('remember'));
 
-        // Registrar login exitoso
+        // Registrar login exitoso en bitácora de logins
         BitacoraLogin::create([
             'usuario_id' => $user->id,
             'ip_address' => $request->ip(),
@@ -84,8 +99,8 @@ class AuthController extends Controller
     {
         $user = auth()->user();
 
-        // Registrar logout en bitácora
         if ($user) {
+            // Registrar logout en bitácora de logins
             BitacoraLogin::create([
                 'usuario_id' => $user->id,
                 'ip_address' => $request->ip(),
@@ -116,7 +131,6 @@ class AuthController extends Controller
         return redirect('/');
     }
 
-    // Redireccionar según rol
     private function redirectToDashboard(User $user)
     {
         switch ($user->rol->nombre) {
@@ -129,5 +143,25 @@ class AuthController extends Controller
             default:
                 return redirect()->route('dashboard');
         }
+    }
+
+    // Verificar sesión activa
+    public function checkSession(Request $request)
+    {
+        return response()->json([
+            'authenticated' => Auth::check(),
+            'user' => Auth::check() ? [
+                'id' => Auth::id(),
+                'name' => Auth::user()->nombre,
+                'role' => Auth::user()->rol->nombre
+            ] : null
+        ]);
+    }
+
+    // Extender sesión
+    public function extendSession(Request $request)
+    {
+        $request->session()->regenerate();
+        return response()->json(['success' => true]);
     }
 }

@@ -41,31 +41,31 @@ class BitacoraController extends Controller
     }
 
     public function acciones(Request $request)
-    {
-        $query = BitacoraAccion::with('usuario');
+{
+    $query = BitacoraAccion::with('usuario');
 
-        // Filtros
-        if ($request->has('accion')) {
-            $query->where('accion', $request->accion);
-        }
-
-        if ($request->has('usuario_id')) {
-            $query->where('usuario_id', $request->usuario_id);
-        }
-
-        if ($request->has('fecha_desde')) {
-            $query->whereDate('created_at', '>=', $request->fecha_desde);
-        }
-
-        if ($request->has('fecha_hasta')) {
-            $query->whereDate('created_at', '<=', $request->fecha_hasta);
-        }
-
-        $acciones = $query->latest()->paginate(20);
-
-        return view('bitacora.acciones', compact('acciones'));
+    // Filtros - SOLO aplicar si tienen valor
+    if ($request->filled('accion')) {
+        $query->where('accion', $request->accion);
     }
 
+    if ($request->filled('usuario_id')) {
+        $query->where('usuario_id', $request->usuario_id);
+    }
+
+    // Validar que las fechas no estén vacías
+    if ($request->filled('fecha_desde')) {
+        $query->whereDate('created_at', '>=', $request->fecha_desde);
+    }
+
+    if ($request->filled('fecha_hasta')) {
+        $query->whereDate('created_at', '<=', $request->fecha_hasta);
+    }
+
+    $acciones = $query->latest()->paginate(20);
+
+    return view('bitacora.acciones', compact('acciones'));
+}
     // Helper function para colores de badges
     private function getBadgeColor($accion)
     {
