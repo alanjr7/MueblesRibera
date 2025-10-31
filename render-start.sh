@@ -3,34 +3,52 @@ set -e
 
 cd /var/www/html
 
-echo "=== Configurando Muebles Ribera ==="
+echo "=== Iniciando Muebles Ribera ==="
 
-# Verificar variables críticas
-echo "APP_URL: ${APP_URL}"
-echo "DB_CONNECTION: ${DB_CONNECTION}"
+# Verificar que vendor existe
+if [ ! -d "vendor" ]; then
+    echo "⚠️  Vendor no encontrado, instalando dependencias..."
+    composer install --no-dev --optimize-autoloader --no-interaction
+fi
 
-# Permisos
+# Verificar que autoload.php existe
+if [ ! -f "vendor/autoload.php" ]; then
+    echo "❌ ERROR: vendor/autoload.php no existe después de composer install"
+    exit 1
+fi
+
+echo "✅ Dependencias de Composer verificadas"
+
+# Configurar permisos
+echo "=== Configurando permisos ==="
 chown -R www-data:www-data storage bootstrap/cache
 chmod -R 775 storage bootstrap/cache
 
-# Limpiar cache
+# Limpiar cache de Laravel
+echo "=== Limpiando cache ==="
 php artisan config:clear
 php artisan cache:clear
 php artisan route:clear
 php artisan view:clear
 
-# Generar key si no existe
-if [ -z "$(grep 'APP_KEY=base64:' .env 2>/dev/null)" ]; then
+# Generar key de Laravel si no existe
+echo "=== Verificando APP_KEY ==="
+if [ -z "$APP_KEY" ] || [ "$APP_KEY" = "" ]; then
+    echo "Generando nueva APP_KEY..."
     php artisan key:generate --force
+else
+    echo "APP_KEY ya configurada"
 fi
 
-# Migraciones
+# Ejecutar migraciones
+echo "=== Ejecutando migraciones ==="
 php artisan migrate --force
 
-# Cache para producción
+# Optimizar para producción
+echo "=== Optimizando para producción ==="
 php artisan config:cache
 php artisan route:cache
 php artisan view:cache
 
-echo "=== ¡Aplicación lista! Iniciando servidor... ==="
+echo "=== ✅ Aplicación lista! Iniciando Apache... ==="
 exec apache2-foreground
