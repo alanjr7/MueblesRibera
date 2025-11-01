@@ -81,7 +81,7 @@ class ProductoController extends Controller
                     $path = $imagen->storeAs('productos', $nombreImagen, 'public');
                     
                     // Guardar la ruta completa para acceso web
-                    $validated['imagen_url'] = 'storage/' . $path;
+                    $validated['imagen_url'] = $path;
                 }
 
                 $producto = Producto::create($validated);
@@ -160,7 +160,7 @@ class ProductoController extends Controller
             $imagen = $request->file('imagen');
             $nombreImagen = time() . '_' . uniqid() . '.' . $imagen->getClientOriginalExtension();
             $path = $imagen->storeAs('productos', $nombreImagen, 'public');
-            $validated['imagen_url'] = 'storage/' . $path;
+            $validated['imagen_url'] = $path;
         }
 
         $producto->update($validated);
