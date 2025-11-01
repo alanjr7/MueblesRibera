@@ -4,7 +4,7 @@ namespace App\Providers;
 
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Facades\View;
-
+use Illuminate\Support\Facades\URL;
 class AppServiceProvider extends ServiceProvider
 {
     public function register(): void
@@ -14,6 +14,7 @@ class AppServiceProvider extends ServiceProvider
 
     public function boot(): void
     {
+          URL::forceScheme('https');
         // Compartir la función de colores con todas las vistas
         View::share('getBadgeColor', function ($accion) {
             $colores = [
