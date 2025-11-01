@@ -65,15 +65,17 @@
                     @forelse($productos as $producto)
                     <tr>
                         <td>
-                            @if($producto->imagen_url)
-                            <img src="{{ asset('storage/' . $producto->imagen_url) }}" alt="{{ $producto->nombre }}" 
-                                 class="rounded" width="50" height="50" style="object-fit: cover;">
-                            @else
-                            <div class="bg-light rounded d-flex align-items-center justify-content-center" 
-                                 style="width: 50px; height: 50px;">
-                                <i class="fas fa-box text-muted"></i>
-                            </div>
-                            @endif
+                       @if($producto->imagen_url)
+                            <img src="{{ Storage::url($producto->imagen_url) }}" 
+                                alt="{{ $producto->nombre }}" 
+                                class="img-fluid rounded" 
+                                style="max-height: 60px; width: auto; object-fit: cover;">
+                        @else
+                            <img src="{{ asset('images/no-image.png') }}" 
+                                alt="Sin imagen" 
+                                class="img-fluid rounded bg-light" 
+                                style="max-height: 60px; width: 60px; object-fit: contain;">
+                        @endif
                         </td>
                         <td>
                             <strong>{{ $producto->nombre }}</strong>

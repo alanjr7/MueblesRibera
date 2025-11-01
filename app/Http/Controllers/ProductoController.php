@@ -51,63 +51,52 @@ class ProductoController extends Controller
 
     // Almacenar nuevo producto
    public function store(Request $request)
-        {
-            $validated = $request->validate([
-                'nombre' => 'required|string|max:200',
-                'descripcion' => 'nullable|string',
-                'precio_usd' => 'required|numeric|min:0',
-                'tasa_cambio' => 'required|numeric|min:0',
-                'stock' => 'required|integer|min:0',
-                'categoria_id' => 'required|exists:categorias,id',
-                'imagen' => 'nullable|image|max:2048',
-                'activo' => 'boolean'
-            ]);
+{
+    $validated = $request->validate([
+        'nombre' => 'required|string|max:200',
+        'descripcion' => 'nullable|string',
+        'precio_usd' => 'required|numeric|min:0',
+        'tasa_cambio' => 'required|numeric|min:0',
+        'stock' => 'required|integer|min:0',
+        'categoria_id' => 'required|exists:categorias,id',
+        'imagen' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
+        'activo' => 'boolean'
+    ]);
 
-            DB::beginTransaction();
+    DB::beginTransaction();
 
-            try {
-                // Calcular precio en bolivianos
-                $validated['precio'] = $validated['precio_usd'] * $validated['tasa_cambio'];
+    try {
+        $validated['precio'] = $validated['precio_usd'] * $validated['tasa_cambio'];
 
-                // Manejar imagen - CORREGIDO
-                if ($request->hasFile('imagen')) {
-                    // Obtener el archivo
-                    $imagen = $request->file('imagen');
-                    
-                    // Generar nombre único
-                    $nombreImagen = time() . '_' . uniqid() . '.' . $imagen->getClientOriginalExtension();
-                    
-                    // Guardar en storage público
-                    $path = $imagen->storeAs('productos', $nombreImagen, 'public');
-                    
-                    // Guardar la ruta completa para acceso web
-                    $validated['imagen_url'] = $path;
-                }
-
-                $producto = Producto::create($validated);
-
-                // Registrar movimiento de inventario
-                if ($validated['stock'] > 0) {
-                    InventarioMov::create([
-                        'producto_id' => $producto->id,
-                        'tipo_movimiento' => 'entrada',
-                        'cantidad' => $validated['stock'],
-                        'usuario_id' => auth()->id(),
-                        'observaciones' => 'Stock inicial'
-                    ]);
-                }
-
-                DB::commit();
-
-                return redirect()->route('productos.index')
-                    ->with('success', 'Producto creado exitosamente.');
-
-            } catch (\Exception $e) {
-                DB::rollBack();
-                \Log::error('Error al crear producto: ' . $e->getMessage());
-                return back()->with('error', 'Error al crear el producto: ' . $e->getMessage());
-            }
+        // SUBIR IMAGEN
+        if ($request->hasFile('imagen')) {
+            $file = $request->file('imagen');
+            $filename = time() . '_' . uniqid() . '.' . $file->getClientOriginalExtension();
+            $path = $file->storeAs('productos', $filename, 'public');
+            $validated['imagen_url'] = $path; // Solo: productos/123.jpg
         }
+
+        $producto = Producto::create($validated);
+
+        if ($validated['stock'] > 0) {
+            InventarioMov::create([
+                'producto_id' => $producto->id,
+                'tipo_movimiento' => 'entrada',
+                'cantidad' => $validated['stock'],
+                'usuario_id' => auth()->id(),
+                'observaciones' => 'Stock inicial'
+            ]);
+        }
+
+        DB::commit();
+        return redirect()->route('productos.index')->with('success', 'Producto creado.');
+
+    } catch (\Exception $e) {
+        DB::rollBack();
+        \Log::error('Error al crear producto: ' . $e->getMessage());
+        return back()->with('error', 'Error: ' . $e->getMessage());
+    }
+}
 
     // Mostrar producto
     public function show(Producto $producto)
@@ -123,7 +112,7 @@ class ProductoController extends Controller
     }
 
     // Actualizar producto
-   public function update(Request $request, Producto $producto)
+ public function update(Request $request, Producto $producto)
 {
     $validated = $request->validate([
         'nombre' => 'required|string|max:200',
@@ -131,7 +120,7 @@ class ProductoController extends Controller
         'precio_usd' => 'required|numeric|min:0',
         'tasa_cambio' => 'required|numeric|min:0',
         'categoria_id' => 'required|exists:categorias,id',
-        'imagen' => 'nullable|image|max:2048',
+        'imagen' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
         'activo' => 'boolean',
         'eliminar_imagen' => 'boolean'
     ]);
@@ -141,73 +130,56 @@ class ProductoController extends Controller
     try {
         $validated['precio'] = $validated['precio_usd'] * $validated['tasa_cambio'];
 
-        // Manejar eliminación de imagen
-        if ($request->has('eliminar_imagen') && $producto->imagen_url) {
-            // Eliminar del storage
-            $rutaArchivo = str_replace('storage/', '', $producto->imagen_url);
-            Storage::disk('public')->delete($rutaArchivo);
+        // ELIMINAR IMAGEN ANTIGUA
+        if ($request->filled('eliminar_imagen') && $producto->imagen_url) {
+            Storage::disk('public')->delete($producto->imagen_url);
             $validated['imagen_url'] = null;
         }
 
-        // Manejar nueva imagen
+        // SUBIR NUEVA IMAGEN
         if ($request->hasFile('imagen')) {
-            // Eliminar imagen anterior si existe
             if ($producto->imagen_url) {
-                $rutaArchivo = str_replace('storage/', '', $producto->imagen_url);
-                Storage::disk('public')->delete($rutaArchivo);
+                Storage::disk('public')->delete($producto->imagen_url);
             }
-            
-            $imagen = $request->file('imagen');
-            $nombreImagen = time() . '_' . uniqid() . '.' . $imagen->getClientOriginalExtension();
-            $path = $imagen->storeAs('productos', $nombreImagen, 'public');
+            $file = $request->file('imagen');
+            $filename = time() . '_' . uniqid() . '.' . $file->getClientOriginalExtension();
+            $path = $file->storeAs('productos', $filename, 'public');
             $validated['imagen_url'] = $path;
         }
 
         $producto->update($validated);
-
         DB::commit();
 
-        return redirect()->route('productos.index')
-            ->with('success', 'Producto actualizado exitosamente.');
+        return redirect()->route('productos.index')->with('success', 'Producto actualizado.');
 
     } catch (\Exception $e) {
         DB::rollBack();
-        \Log::error('Error al actualizar producto: ' . $e->getMessage());
-        return back()->with('error', 'Error al actualizar el producto: ' . $e->getMessage());
+        return back()->with('error', 'Error: ' . $e->getMessage());
     }
 }
 
     // Eliminar producto
-    public function destroy(Producto $producto)
+   public function destroy(Producto $producto)
 {
     DB::beginTransaction();
 
     try {
-        // Primero eliminar registros relacionados
         \App\Models\InventarioMov::where('producto_id', $producto->id)->delete();
         \App\Models\VentaDetalle::where('producto_id', $producto->id)->delete();
         \App\Models\CarritoItem::where('producto_id', $producto->id)->delete();
 
-        // Luego eliminar la imagen si existe
         if ($producto->imagen_url) {
             Storage::disk('public')->delete($producto->imagen_url);
         }
 
-        // Finalmente eliminar el producto
         $producto->delete();
-
         DB::commit();
 
-        return redirect()->route('productos.index')
-            ->with('success', 'Producto eliminado exitosamente.');
+        return redirect()->route('productos.index')->with('success', 'Producto eliminado.');
 
     } catch (\Exception $e) {
         DB::rollBack();
-        \Log::error('Error al eliminar producto:', [
-            'producto_id' => $producto->id,
-            'error' => $e->getMessage()
-        ]);
-        return back()->with('error', 'Error al eliminar el producto: ' . $e->getMessage());
+        return back()->with('error', 'Error: ' . $e->getMessage());
     }
 }
     // Ajustar stock
