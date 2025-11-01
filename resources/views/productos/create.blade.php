@@ -130,7 +130,7 @@
                             <div class="invalid-feedback">{{ $message }}</div>
                         @enderror
                     </div>
-
+<!-- cambiando a local -->
                     <div class="mb-3 form-check">
                         <input type="checkbox" class="form-check-input" id="activo" name="activo" value="1" 
                                {{ old('activo', true) ? 'checked' : '' }}>
