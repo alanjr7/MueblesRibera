@@ -14,7 +14,13 @@ echo "DATABASE_URL = ${DATABASE_URL:0:60}..."
 
 # Permisos
 chown -R www-data:www-data storage bootstrap/cache
+chmod -R 755 .
 chmod -R 775 storage bootstrap/cache
+
+# === ENLACE SIMBÓLICO (CRÍTICO) ===
+echo "Creando enlace simbólico storage..."
+rm -rf public/storage  # Eliminar si existe mal
+php artisan storage:link
 
 # Laravel
 php artisan config:clear
